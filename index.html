@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Cost-Effectiveness Meta-Analysis: Pool NMB, ICER, CEAC and CE Plane from economic evaluations">
+<meta property="og:title" content="CostEffMA — Cost-Effectiveness Meta-Analysis">
+<meta property="og:description" content="Browser-based pooling of cost-effectiveness data with NMB forest, ICER forest, CEAC, and CE Plane">
+<meta property="og:type" content="website">
+<title>CostEffMA — Cost-Effectiveness Meta-Analysis</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e17;--surface:rgba(20,28,50,0.75);--glass:rgba(30,42,70,0.55);
+  --border:rgba(100,140,255,0.15);--text:#e2e8f0;--text2:#94a3b8;
+  --accent:#60a5fa;--accent2:#a78bfa;--green:#34d399;--red:#f87171;
+  --orange:#fb923c;--yellow:#fbbf24;
+}
+html{font-size:15px}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 30% 20%,rgba(96,165,250,0.06),transparent 50%),radial-gradient(ellipse at 70% 80%,rgba(167,139,250,0.05),transparent 50%);z-index:0;pointer-events:none}
+.container{max-width:1400px;margin:0 auto;padding:1rem;position:relative;z-index:1}
+h1{font-size:1.8rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.3rem}
+.subtitle{color:var(--text2);font-size:0.9rem;margin-bottom:1.2rem}
+.glass{background:var(--glass);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:12px;padding:1.2rem}
+.grid-main{display:grid;grid-template-columns:380px 1fr;gap:1rem;align-items:start}
+@media(max-width:900px){.grid-main{grid-template-columns:1fr}}
+/* Input panel */
+.input-panel h2{font-size:1.1rem;color:var(--accent);margin-bottom:0.8rem}
+label{display:block;color:var(--text2);font-size:0.82rem;margin-bottom:0.25rem;margin-top:0.6rem}
+textarea{width:100%;height:180px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Consolas','Courier New',monospace;font-size:0.78rem;padding:0.6rem;resize:vertical}
+textarea:focus{outline:none;border-color:var(--accent)}
+input[type=text],input[type=number]{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.4rem 0.6rem;font-size:0.85rem}
+input:focus{outline:none;border-color:var(--accent)}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem}
+.slider-wrap{margin-top:0.6rem}
+.slider-wrap input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+.wtp-val{font-size:1.1rem;color:var(--accent);font-weight:700}
+.btn-row{display:flex;gap:0.5rem;margin-top:1rem}
+.btn{padding:0.5rem 1rem;border:none;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;transition:all 0.2s}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.btn-secondary{background:rgba(100,140,255,0.12);color:var(--accent);border:1px solid var(--border)}
+.btn-secondary:hover{background:rgba(100,140,255,0.22)}
+/* Tabs */
+.tabs{display:flex;gap:0.3rem;margin-bottom:0.8rem;flex-wrap:wrap}
+.tab{padding:0.45rem 1rem;border-radius:8px 8px 0 0;background:rgba(255,255,255,0.04);color:var(--text2);cursor:pointer;font-size:0.82rem;font-weight:600;border:1px solid transparent;border-bottom:none;transition:all 0.2s}
+.tab.active{background:var(--glass);color:var(--accent);border-color:var(--border)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* Summary table */
+.summary-tbl{width:100%;border-collapse:collapse;margin-top:0.8rem;font-size:0.85rem}
+.summary-tbl th{text-align:left;color:var(--accent);padding:0.5rem;border-bottom:1px solid var(--border);font-weight:600}
+.summary-tbl td{padding:0.5rem;border-bottom:1px solid rgba(100,140,255,0.07)}
+.summary-tbl td:nth-child(2){color:var(--text);font-weight:600}
+/* Charts */
+.chart-box{background:rgba(0,0,0,0.2);border-radius:10px;padding:0.8rem;min-height:350px;position:relative}
+.chart-box svg{width:100%;height:auto}
+.export-row{display:flex;gap:0.4rem;margin-top:0.5rem;justify-content:flex-end}
+.export-btn{font-size:0.75rem;padding:0.3rem 0.7rem;background:rgba(255,255,255,0.06);color:var(--text2);border:1px solid var(--border);border-radius:6px;cursor:pointer}
+.export-btn:hover{background:rgba(255,255,255,0.12)}
+/* Warning */
+.warning{background:rgba(251,146,60,0.12);border:1px solid rgba(251,146,60,0.3);border-radius:8px;padding:0.8rem;color:var(--orange);font-size:0.85rem;margin-top:0.5rem}
+.warning-title{font-weight:700;margin-bottom:0.3rem}
+/* Info badge */
+.info-badge{display:inline-block;background:rgba(96,165,250,0.1);color:var(--accent);font-size:0.75rem;padding:0.15rem 0.5rem;border-radius:10px;margin-left:0.5rem}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>CostEffMA</h1>
+  <p class="subtitle">Cost-Effectiveness Meta-Analysis &mdash; NMB, ICER, CEAC &amp; CE Plane</p>
+
+  <div class="grid-main">
+    <!-- INPUT PANEL -->
+    <div class="glass input-panel" id="inputPanel">
+      <h2>Input Data</h2>
+      <label for="csvInput">CSV Data (Study, DeltaCost, SE_Cost, DeltaEffect, SE_Effect, Correlation)</label>
+      <textarea id="csvInput" spellcheck="false" aria-label="CSV data input"></textarea>
+
+      <div class="row-2">
+        <div><label for="currencyInput">Currency</label><input type="text" id="currencyInput" value="£"></div>
+        <div><label for="effectUnit">Effect Unit</label><input type="text" id="effectUnit" value="QALYs"></div>
+      </div>
+      <div class="row-2">
+        <div><label for="defaultCorr">Default Correlation</label><input type="number" id="defaultCorr" value="0" step="0.05" min="-1" max="1"></div>
+        <div><label for="wtpMax">WTP Max</label><input type="number" id="wtpMax" value="200000" step="10000" min="0"></div>
+      </div>
+
+      <div class="slider-wrap">
+        <label>Willingness-to-Pay Threshold: <span class="wtp-val" id="wtpDisplay">£25,000</span></label>
+        <input type="range" id="wtpSlider" min="0" max="200000" step="1000" value="25000">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="analyzeBtn">Analyze</button>
+        <button class="btn btn-secondary" id="demoBtn">Load Demo Data</button>
+      </div>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <div class="glass" id="resultsPanel" style="display:none">
+      <div class="tabs" id="tabBar">
+        <div class="tab active" data-tab="nmb">NMB Forest</div>
+        <div class="tab" data-tab="icer">ICER Analysis</div>
+        <div class="tab" data-tab="ceac">CEAC</div>
+        <div class="tab" data-tab="ceplane">CE Plane</div>
+      </div>
+
+      <!-- NMB Forest -->
+      <div class="tab-content active" id="tab-nmb">
+        <div class="chart-box" id="nmbChartBox"></div>
+        <div class="export-row">
+          <button class="export-btn" onclick="exportSVG('nmbChartBox','nmb_forest.svg')">SVG</button>
+          <button class="export-btn" onclick="exportCSV('nmb')">CSV</button>
+        </div>
+      </div>
+      <!-- ICER -->
+      <div class="tab-content" id="tab-icer">
+        <div class="chart-box" id="icerChartBox"></div>
+        <div class="export-row">
+          <button class="export-btn" onclick="exportSVG('icerChartBox','icer_forest.svg')">SVG</button>
+          <button class="export-btn" onclick="exportCSV('icer')">CSV</button>
+        </div>
+      </div>
+      <!-- CEAC -->
+      <div class="tab-content" id="tab-ceac">
+        <div class="chart-box" id="ceacChartBox"></div>
+        <div class="export-row">
+          <button class="export-btn" onclick="exportSVG('ceacChartBox','ceac.svg')">SVG</button>
+          <button class="export-btn" onclick="exportCSV('ceac')">CSV</button>
+        </div>
+      </div>
+      <!-- CE Plane -->
+      <div class="tab-content" id="tab-ceplane">
+        <div class="chart-box" id="ceplaneChartBox"></div>
+        <div class="export-row">
+          <button class="export-btn" onclick="exportSVG('ceplaneChartBox','ce_plane.svg')">SVG</button>
+          <button class="export-btn" onclick="exportCSV('ceplane')">CSV</button>
+        </div>
+      </div>
+
+      <!-- Summary Table -->
+      <table class="summary-tbl" id="summaryTable">
+        <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CostEffMA — Cost-Effectiveness Meta-Analysis Engine
+   ============================================================ */
+
+const DEMO_CSV = `Study,DeltaCost,SE_Cost,DeltaEffect,SE_Effect,Correlation
+Thompson 2019,5000,1200,0.15,0.04,0.3
+Chen 2020,8000,2000,0.22,0.06,0.25
+Garcia 2018,3500,900,0.10,0.03,0.35
+Kim 2021,6500,1500,0.18,0.05,0.2
+Patel 2020,12000,3000,0.30,0.08,0.15
+Wilson 2019,4200,1100,0.12,0.04,0.3`;
+
+// ---- State ----
+let studies = [];
+let lastResults = null;
+
+// ---- Math helpers ----
+function phi(z) {
+  // Standard normal CDF (Abramowitz & Stegun approximation)
+  const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1.0 / (1.0 + p * x);
+  const y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t * Math.exp(-x*x);
+  return 0.5 * (1.0 + sign * y);
+}
+
+// t-distribution quantile approximation (Cornish-Fisher for small df, normal for large)
+function qt(p, df) {
+  // Use normal approximation adjusted for df
+  const z = qnorm(p);
+  if (df > 100) return z;
+  const g1 = (z*z*z + z) / (4*df);
+  const g2 = (5*z*z*z*z*z + 16*z*z*z + 3*z) / (96*df*df);
+  return z + g1 + g2;
+}
+
+function qnorm(p) {
+  // Rational approximation of inverse normal CDF
+  if (p <= 0) return -Infinity;
+  if (p >= 1) return Infinity;
+  if (p === 0.5) return 0;
+  const a = [
+    -3.969683028665376e1, 2.209460984245205e2,
+    -2.759285104469687e2, 1.383577518672690e2,
+    -3.066479806614716e1, 2.506628277459239e0
+  ];
+  const b = [
+    -5.447609879822406e1, 1.615858368580409e2,
+    -1.556989798598866e2, 6.680131188771972e1,
+    -1.328068155288572e1
+  ];
+  const c = [
+    -7.784894002430293e-3, -3.223964580411365e-1,
+    -2.400758277161838e0, -2.549732539343734e0,
+    4.374664141464968e0, 2.938163982698783e0
+  ];
+  const d = [
+    7.784695709041462e-3, 3.224671290700398e-1,
+    2.445134137142996e0, 3.754408661907416e0
+  ];
+  const pLow = 0.02425, pHigh = 1 - pLow;
+  let q, r;
+  if (p < pLow) {
+    q = Math.sqrt(-2*Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+           ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  } else if (p <= pHigh) {
+    q = p - 0.5; r = q*q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q /
+           (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  } else {
+    q = Math.sqrt(-2*Math.log(1-p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+            ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+}
+
+// ---- CSV parsing ----
+function parseCSV(text) {
+  const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length < 2) return [];
+  // Skip header
+  const results = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(',');
+    if (parts.length < 5) continue;
+    const study = parts[0].trim();
+    const deltaCost = parseFloat(parts[1]);
+    const seCost = parseFloat(parts[2]);
+    const deltaEffect = parseFloat(parts[3]);
+    const seEffect = parseFloat(parts[4]);
+    const corr = parts.length >= 6 ? parseFloat(parts[5]) : parseFloat(document.getElementById('defaultCorr').value) || 0;
+    if (!study || !isFinite(deltaCost) || !isFinite(seCost) || !isFinite(deltaEffect) || !isFinite(seEffect)) continue;
+    results.push({ study, deltaCost, seCost, deltaEffect, seEffect, corr: isFinite(corr) ? corr : 0 });
+  }
+  return results;
+}
+
+// ---- NMB Calculation ----
+function calcNMB(s, wtp) {
+  const nmb = wtp * s.deltaEffect - s.deltaCost;
+  // var(NMB) = WTP^2 * var(dEffect) + var(dCost) - 2*WTP*cov(cost,effect)
+  const cov = s.corr * s.seCost * s.seEffect;
+  const varNMB = wtp*wtp * s.seEffect*s.seEffect + s.seCost*s.seCost - 2*wtp*cov;
+  const seNMB = Math.sqrt(Math.max(0, varNMB));
+  return { nmb, seNMB, varNMB: Math.max(0, varNMB) };
+}
+
+// ---- DerSimonian-Laird Random Effects ----
+function dlPool(estimates, variances) {
+  const k = estimates.length;
+  if (k === 0) return null;
+  if (k === 1) {
+    return {
+      pooled: estimates[0], se: Math.sqrt(variances[0]),
+      ci_lo: estimates[0] - 1.96*Math.sqrt(variances[0]),
+      ci_hi: estimates[0] + 1.96*Math.sqrt(variances[0]),
+      tau2: 0, I2: 0, Q: 0, k: 1, weights: [1]
+    };
+  }
+  const w = variances.map(v => v > 0 ? 1/v : 0);
+  const sumW = w.reduce((a,b) => a+b, 0);
+  if (sumW === 0) return null;
+  const thetaFE = w.reduce((s, wi, i) => s + wi*estimates[i], 0) / sumW;
+  const Q = w.reduce((s, wi, i) => s + wi*(estimates[i] - thetaFE)**2, 0);
+  const sumW2 = w.reduce((s, wi) => s + wi*wi, 0);
+  const C = sumW - sumW2/sumW;
+  let tau2 = Math.max(0, (Q - (k-1)) / C);
+  const wRE = variances.map(v => 1 / (v + tau2));
+  const sumWRE = wRE.reduce((a,b) => a+b, 0);
+  const pooled = wRE.reduce((s, wi, i) => s + wi*estimates[i], 0) / sumWRE;
+  const se = Math.sqrt(1 / sumWRE);
+  // I-squared
+  const I2 = Q > (k-1) ? ((Q - (k-1)) / Q) * 100 : 0;
+  // Use t-distribution for CI when k < 30 (HKSJ-like)
+  let tCrit;
+  if (k >= 3) {
+    // HKSJ adjustment
+    const qAdj = Math.max(1, Q / (k - 1));
+    const seAdj = se * Math.sqrt(qAdj);
+    tCrit = Math.abs(qt(0.025, k - 1));
+    return {
+      pooled, se: seAdj,
+      ci_lo: pooled - tCrit * seAdj,
+      ci_hi: pooled + tCrit * seAdj,
+      tau2, I2, Q, k,
+      weights: wRE.map(wi => wi / sumWRE)
+    };
+  }
+  return {
+    pooled, se,
+    ci_lo: pooled - 1.96 * se,
+    ci_hi: pooled + 1.96 * se,
+    tau2, I2, Q, k,
+    weights: wRE.map(wi => wi / sumWRE)
+  };
+}
+
+// ---- ICER pooling (log scale) ----
+function calcICER(s) {
+  if (s.deltaEffect <= 0) return null;
+  const icer = s.deltaCost / s.deltaEffect;
+  // Only valid if ICER > 0 (deltaCost > 0 and deltaEffect > 0)
+  if (icer <= 0) return null;
+  const logICER = Math.log(icer);
+  // SE(log_ICER) via delta method
+  const term1 = (s.seCost / s.deltaCost) ** 2;
+  const term2 = (s.seEffect / s.deltaEffect) ** 2;
+  const term3 = 2 * s.corr * (s.seCost * s.seEffect) / (s.deltaCost * s.deltaEffect);
+  const varLogICER = term1 + term2 - term3;
+  if (varLogICER < 0) return null;
+  const seLogICER = Math.sqrt(varLogICER);
+  return { icer, logICER, seLogICER, varLogICER };
+}
+
+// ---- CEAC ----
+function calcCEAC(studies, wtpValues) {
+  const results = [];
+  for (const wtp of wtpValues) {
+    const nmbStudies = studies.map(s => calcNMB(s, wtp));
+    const estimates = nmbStudies.map(n => n.nmb);
+    const variances = nmbStudies.map(n => n.varNMB);
+    const pool = dlPool(estimates, variances);
+    if (!pool) { results.push({ wtp, pCE: 0.5 }); continue; }
+    const z = pool.se > 0 ? pool.pooled / pool.se : (pool.pooled > 0 ? 10 : -10);
+    const pCE = phi(z);
+    results.push({ wtp, pCE, pooledNMB: pool.pooled, pooledSE: pool.se });
+  }
+  return results;
+}
+
+// ---- Full analysis ----
+function runAnalysis(wtp) {
+  if (studies.length === 0) return null;
+  const currency = document.getElementById('currencyInput').value || '£';
+  const unit = document.getElementById('effectUnit').value || 'QALYs';
+
+  // NMB per study
+  const nmbData = studies.map(s => {
+    const n = calcNMB(s, wtp);
+    return { study: s.study, nmb: n.nmb, seNMB: n.seNMB, varNMB: n.varNMB };
+  });
+  const nmbPool = dlPool(nmbData.map(d => d.nmb), nmbData.map(d => d.varNMB));
+
+  // ICER per study
+  const icerData = [];
+  let icerWarning = '';
+  const allPositiveEffect = studies.every(s => s.deltaEffect > 0);
+  const allPositiveCost = studies.every(s => s.deltaCost > 0);
+  if (!allPositiveEffect) {
+    icerWarning = 'ICER analysis not available: one or more studies have deltaEffect <= 0.';
+  } else if (!allPositiveCost) {
+    icerWarning = 'ICER analysis limited: some studies have negative deltaCost (cost-saving / dominant treatment).';
+  }
+
+  let icerPool = null;
+  if (allPositiveEffect) {
+    for (const s of studies) {
+      const ic = calcICER(s);
+      if (ic) icerData.push({ study: s.study, ...ic });
+    }
+    if (icerData.length >= 1) {
+      icerPool = dlPool(icerData.map(d => d.logICER), icerData.map(d => d.varLogICER));
+      if (icerPool) {
+        icerPool.pooledICER = Math.exp(icerPool.pooled);
+        icerPool.icerCI_lo = Math.exp(icerPool.ci_lo);
+        icerPool.icerCI_hi = Math.exp(icerPool.ci_hi);
+      }
+    }
+  }
+
+  // CEAC
+  const wtpMax = parseFloat(document.getElementById('wtpMax').value) || 200000;
+  const wtpStep = Math.max(500, wtpMax / 200);
+  const wtpValues = [];
+  for (let w = 0; w <= wtpMax; w += wtpStep) wtpValues.push(w);
+  if (wtpValues[wtpValues.length - 1] < wtpMax) wtpValues.push(wtpMax);
+  const ceacData = calcCEAC(studies, wtpValues);
+
+  // P(CE) at current WTP
+  const ceacAtWTP = calcCEAC(studies, [wtp])[0];
+
+  // Check if treatment is dominant (all deltaCost < 0)
+  const allCostSaving = studies.every(s => s.deltaCost < 0);
+
+  return {
+    nmbData, nmbPool, icerData, icerPool, icerWarning,
+    ceacData, ceacAtWTP, currency, unit, wtp,
+    allPositiveEffect, allCostSaving, studies
+  };
+}
+
+// ---- SVG Drawing ----
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  return el;
+}
+
+function svgText(x, y, text, attrs) {
+  const el = svgEl('text', { x, y, fill: '#e2e8f0', 'font-family': 'Segoe UI,system-ui,sans-serif', 'font-size': '12', ...attrs });
+  el.textContent = text;
+  return el;
+}
+
+function formatNum(n, dec) {
+  if (!isFinite(n)) return 'N/A';
+  if (dec === undefined) dec = Math.abs(n) < 1 ? 4 : (Math.abs(n) < 100 ? 2 : 0);
+  return n.toLocaleString('en-GB', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+// ---- NMB Forest Plot ----
+function drawNMBForest(res) {
+  const box = document.getElementById('nmbChartBox');
+  box.innerHTML = '';
+  if (!res || !res.nmbPool) return;
+
+  const data = res.nmbData;
+  const pool = res.nmbPool;
+  const k = data.length;
+  const rowH = 32;
+  const marginL = 180, marginR = 200, marginT = 40, marginB = 30;
+  const plotW = 500;
+  const svgW = marginL + plotW + marginR;
+  const svgH = marginT + (k + 2) * rowH + marginB;
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${svgW} ${svgH}`, xmlns: SVG_NS, id: 'nmbForestSVG' });
+  // Background
+  svg.appendChild(svgEl('rect', { width: svgW, height: svgH, fill: '#0d1117', rx: 8 }));
+
+  // Determine x scale
+  const allVals = data.flatMap(d => [d.nmb - 1.96*d.seNMB, d.nmb + 1.96*d.seNMB]);
+  allVals.push(pool.ci_lo, pool.ci_hi, 0);
+  let xMin = Math.min(...allVals);
+  let xMax = Math.max(...allVals);
+  const pad = (xMax - xMin) * 0.1 || 1000;
+  xMin -= pad; xMax += pad;
+  const xScale = v => marginL + (v - xMin) / (xMax - xMin) * plotW;
+
+  // Zero line
+  const x0 = xScale(0);
+  svg.appendChild(svgEl('line', { x1: x0, y1: marginT, x2: x0, y2: marginT + (k+1)*rowH, stroke: 'rgba(255,255,255,0.15)', 'stroke-dasharray': '4,4' }));
+
+  // Title
+  svg.appendChild(svgText(svgW/2, 20, `NMB Forest Plot (WTP = ${res.currency}${formatNum(res.wtp, 0)})`, { 'text-anchor': 'middle', 'font-size': '14', 'font-weight': '700', fill: '#60a5fa' }));
+
+  // Column headers
+  const headerY = marginT - 8;
+  svg.appendChild(svgText(10, headerY, 'Study', { 'font-weight': '700', fill: '#94a3b8', 'font-size': '11' }));
+  svg.appendChild(svgText(marginL + plotW + 10, headerY, 'NMB [95% CI]', { 'font-weight': '700', fill: '#94a3b8', 'font-size': '11' }));
+
+  // Studies
+  data.forEach((d, i) => {
+    const y = marginT + (i + 0.5) * rowH;
+    const lo = d.nmb - 1.96 * d.seNMB;
+    const hi = d.nmb + 1.96 * d.seNMB;
+    // Study label
+    svg.appendChild(svgText(10, y + 4, d.study, { 'font-size': '11' }));
+    // CI line
+    svg.appendChild(svgEl('line', { x1: xScale(lo), y1: y, x2: xScale(hi), y2: y, stroke: '#60a5fa', 'stroke-width': 1.5 }));
+    // Point
+    const sz = 6;
+    svg.appendChild(svgEl('rect', { x: xScale(d.nmb) - sz/2, y: y - sz/2, width: sz, height: sz, fill: '#60a5fa', rx: 1 }));
+    // Estimate text
+    svg.appendChild(svgText(marginL + plotW + 10, y + 4, `${formatNum(d.nmb)} [${formatNum(lo)}, ${formatNum(hi)}]`, { 'font-size': '10', fill: '#94a3b8' }));
+  });
+
+  // Pooled line
+  const poolY = marginT + (k + 0.5) * rowH;
+  svg.appendChild(svgEl('line', { x1: marginL, y1: poolY - rowH/2 + 2, x2: marginL + plotW, y2: poolY - rowH/2 + 2, stroke: 'rgba(255,255,255,0.08)' }));
+  // Diamond
+  const dCx = xScale(pool.pooled), dL = xScale(pool.ci_lo), dR = xScale(pool.ci_hi), dH = 10;
+  svg.appendChild(svgEl('polygon', { points: `${dL},${poolY} ${dCx},${poolY-dH} ${dR},${poolY} ${dCx},${poolY+dH}`, fill: '#a78bfa', opacity: 0.85 }));
+  svg.appendChild(svgText(10, poolY + 4, 'Pooled (RE)', { 'font-weight': '700', 'font-size': '11', fill: '#a78bfa' }));
+  svg.appendChild(svgText(marginL + plotW + 10, poolY + 4, `${formatNum(pool.pooled)} [${formatNum(pool.ci_lo)}, ${formatNum(pool.ci_hi)}]`, { 'font-size': '10', fill: '#a78bfa' }));
+
+  box.appendChild(svg);
+}
+
+// ---- ICER Forest Plot ----
+function drawICERForest(res) {
+  const box = document.getElementById('icerChartBox');
+  box.innerHTML = '';
+
+  if (res.icerWarning && res.icerData.length === 0) {
+    const warn = document.createElement('div');
+    warn.className = 'warning';
+    warn.id = 'icerWarning';
+    warn.innerHTML = `<div class="warning-title">ICER Analysis Unavailable</div>${res.icerWarning}`;
+    box.appendChild(warn);
+    return;
+  }
+
+  const data = res.icerData;
+  const pool = res.icerPool;
+  if (!pool) return;
+  const k = data.length;
+  const rowH = 32;
+  const marginL = 180, marginR = 240, marginT = 40, marginB = 30;
+  const plotW = 450;
+  const svgW = marginL + plotW + marginR;
+  const svgH = marginT + (k + 2) * rowH + marginB;
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${svgW} ${svgH}`, xmlns: SVG_NS, id: 'icerForestSVG' });
+  svg.appendChild(svgEl('rect', { width: svgW, height: svgH, fill: '#0d1117', rx: 8 }));
+
+  // Log scale
+  const allLogVals = data.flatMap(d => [d.logICER - 1.96*d.seLogICER, d.logICER + 1.96*d.seLogICER]);
+  allLogVals.push(pool.ci_lo, pool.ci_hi);
+  let logMin = Math.min(...allLogVals);
+  let logMax = Math.max(...allLogVals);
+  const padLog = (logMax - logMin) * 0.1 || 0.5;
+  logMin -= padLog; logMax += padLog;
+  const xScale = v => marginL + (v - logMin) / (logMax - logMin) * plotW;
+
+  // Title
+  svg.appendChild(svgText(svgW/2, 20, 'ICER Forest Plot (log scale)', { 'text-anchor': 'middle', 'font-size': '14', 'font-weight': '700', fill: '#60a5fa' }));
+
+  // Headers
+  svg.appendChild(svgText(10, marginT - 8, 'Study', { 'font-weight': '700', fill: '#94a3b8', 'font-size': '11' }));
+  svg.appendChild(svgText(marginL + plotW + 10, marginT - 8, `ICER (${res.currency}/${res.unit}) [95% CI]`, { 'font-weight': '700', fill: '#94a3b8', 'font-size': '11' }));
+
+  data.forEach((d, i) => {
+    const y = marginT + (i + 0.5) * rowH;
+    const lo = d.logICER - 1.96 * d.seLogICER;
+    const hi = d.logICER + 1.96 * d.seLogICER;
+    svg.appendChild(svgText(10, y + 4, d.study, { 'font-size': '11' }));
+    svg.appendChild(svgEl('line', { x1: xScale(lo), y1: y, x2: xScale(hi), y2: y, stroke: '#34d399', 'stroke-width': 1.5 }));
+    svg.appendChild(svgEl('rect', { x: xScale(d.logICER) - 3, y: y - 3, width: 6, height: 6, fill: '#34d399', rx: 1 }));
+    svg.appendChild(svgText(marginL + plotW + 10, y + 4,
+      `${formatNum(d.icer, 0)} [${formatNum(Math.exp(lo), 0)}, ${formatNum(Math.exp(hi), 0)}]`,
+      { 'font-size': '10', fill: '#94a3b8' }));
+  });
+
+  // Pooled diamond
+  const poolY = marginT + (k + 0.5) * rowH;
+  svg.appendChild(svgEl('line', { x1: marginL, y1: poolY - rowH/2 + 2, x2: marginL + plotW, y2: poolY - rowH/2 + 2, stroke: 'rgba(255,255,255,0.08)' }));
+  const dCx = xScale(pool.pooled), dL = xScale(pool.ci_lo), dR = xScale(pool.ci_hi), dH = 10;
+  svg.appendChild(svgEl('polygon', { points: `${dL},${poolY} ${dCx},${poolY-dH} ${dR},${poolY} ${dCx},${poolY+dH}`, fill: '#fbbf24', opacity: 0.85 }));
+  svg.appendChild(svgText(10, poolY + 4, 'Pooled (RE)', { 'font-weight': '700', 'font-size': '11', fill: '#fbbf24' }));
+  svg.appendChild(svgText(marginL + plotW + 10, poolY + 4,
+    `${formatNum(pool.pooledICER, 0)} [${formatNum(pool.icerCI_lo, 0)}, ${formatNum(pool.icerCI_hi, 0)}]`,
+    { 'font-size': '10', fill: '#fbbf24' }));
+
+  // Axis tick labels
+  const nTicks = 5;
+  for (let i = 0; i <= nTicks; i++) {
+    const logV = logMin + (logMax - logMin) * i / nTicks;
+    const x = xScale(logV);
+    const axisY = marginT + (k + 1.5) * rowH;
+    svg.appendChild(svgEl('line', { x1: x, y1: axisY - 5, x2: x, y2: axisY + 5, stroke: 'rgba(255,255,255,0.2)' }));
+    svg.appendChild(svgText(x, axisY + 18, formatNum(Math.exp(logV), 0), { 'text-anchor': 'middle', 'font-size': '9', fill: '#64748b' }));
+  }
+
+  if (res.icerWarning) {
+    const warn = document.createElement('div');
+    warn.className = 'warning';
+    warn.innerHTML = `<div class="warning-title">Note</div>${res.icerWarning}`;
+    box.appendChild(warn);
+  }
+  box.appendChild(svg);
+}
+
+// ---- CEAC ----
+function drawCEAC(res) {
+  const box = document.getElementById('ceacChartBox');
+  box.innerHTML = '';
+  if (!res || !res.ceacData || res.ceacData.length === 0) return;
+
+  const data = res.ceacData;
+  const W = 700, H = 400, mL = 70, mR = 30, mT = 40, mB = 50;
+  const pW = W - mL - mR, pH = H - mT - mB;
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, xmlns: SVG_NS, id: 'ceacSVG' });
+  svg.appendChild(svgEl('rect', { width: W, height: H, fill: '#0d1117', rx: 8 }));
+
+  const wtpMax = data[data.length - 1].wtp;
+  const xScale = w => mL + (w / wtpMax) * pW;
+  const yScale = p => mT + (1 - p) * pH;
+
+  // Grid
+  for (let i = 0; i <= 4; i++) {
+    const y = yScale(i * 0.25);
+    svg.appendChild(svgEl('line', { x1: mL, y1: y, x2: mL + pW, y2: y, stroke: 'rgba(255,255,255,0.06)' }));
+    svg.appendChild(svgText(mL - 8, y + 4, (i * 25) + '%', { 'text-anchor': 'end', 'font-size': '10', fill: '#64748b' }));
+  }
+  for (let i = 0; i <= 4; i++) {
+    const w = wtpMax * i / 4;
+    const x = xScale(w);
+    svg.appendChild(svgEl('line', { x1: x, y1: mT, x2: x, y2: mT + pH, stroke: 'rgba(255,255,255,0.06)' }));
+    svg.appendChild(svgText(x, mT + pH + 18, res.currency + formatNum(w, 0), { 'text-anchor': 'middle', 'font-size': '10', fill: '#64748b' }));
+  }
+
+  // Curve
+  let pathD = '';
+  data.forEach((d, i) => {
+    const x = xScale(d.wtp), y = yScale(d.pCE);
+    pathD += (i === 0 ? 'M' : 'L') + `${x},${y} `;
+  });
+  svg.appendChild(svgEl('path', { d: pathD, fill: 'none', stroke: '#60a5fa', 'stroke-width': 2.5 }));
+  // Fill under curve
+  const fillD = pathD + `L${xScale(wtpMax)},${yScale(0)} L${xScale(0)},${yScale(0)} Z`;
+  svg.appendChild(svgEl('path', { d: fillD, fill: 'rgba(96,165,250,0.08)' }));
+
+  // WTP vertical line
+  const xWTP = xScale(res.wtp);
+  svg.appendChild(svgEl('line', { x1: xWTP, y1: mT, x2: xWTP, y2: mT + pH, stroke: '#fbbf24', 'stroke-width': 1.5, 'stroke-dasharray': '6,3' }));
+  // P(CE) dot
+  if (res.ceacAtWTP) {
+    const yDot = yScale(res.ceacAtWTP.pCE);
+    svg.appendChild(svgEl('circle', { cx: xWTP, cy: yDot, r: 5, fill: '#fbbf24' }));
+    svg.appendChild(svgText(xWTP + 10, yDot - 8, `P(CE) = ${(res.ceacAtWTP.pCE * 100).toFixed(1)}%`, { fill: '#fbbf24', 'font-size': '11', 'font-weight': '600' }));
+  }
+
+  // Title & axes
+  svg.appendChild(svgText(W/2, 20, 'Cost-Effectiveness Acceptability Curve (CEAC)', { 'text-anchor': 'middle', 'font-size': '14', 'font-weight': '700', fill: '#60a5fa' }));
+  svg.appendChild(svgText(W/2, H - 5, `WTP per ${res.unit}`, { 'text-anchor': 'middle', 'font-size': '11', fill: '#94a3b8' }));
+  svg.appendChild(svgText(15, H/2, 'P(Cost-Effective)', { 'text-anchor': 'middle', 'font-size': '11', fill: '#94a3b8', transform: `rotate(-90,15,${H/2})` }));
+
+  box.appendChild(svg);
+}
+
+// ---- CE Plane ----
+function drawCEPlane(res) {
+  const box = document.getElementById('ceplaneChartBox');
+  box.innerHTML = '';
+  if (!res || !res.studies || res.studies.length === 0) return;
+
+  const W = 700, H = 500, mL = 80, mR = 30, mT = 40, mB = 55;
+  const pW = W - mL - mR, pH = H - mT - mB;
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, xmlns: SVG_NS, id: 'ceplaneSVG' });
+  svg.appendChild(svgEl('rect', { width: W, height: H, fill: '#0d1117', rx: 8 }));
+
+  const ss = res.studies;
+  const effects = ss.map(s => s.deltaEffect);
+  const costs = ss.map(s => s.deltaCost);
+  let xMin = Math.min(...effects, 0);
+  let xMax = Math.max(...effects, 0);
+  let yMin = Math.min(...costs, 0);
+  let yMax = Math.max(...costs, 0);
+  const xPad = (xMax - xMin) * 0.15 || 0.05;
+  const yPad = (yMax - yMin) * 0.15 || 1000;
+  xMin -= xPad; xMax += xPad; yMin -= yPad; yMax += yPad;
+
+  const xScale = v => mL + (v - xMin) / (xMax - xMin) * pW;
+  const yScale = v => mT + (yMax - v) / (yMax - yMin) * pH;
+
+  // Quadrant shading
+  const x0 = xScale(0), y0 = yScale(0);
+  // NE: more effective + more costly
+  svg.appendChild(svgEl('rect', { x: x0, y: mT, width: mL + pW - x0, height: y0 - mT, fill: 'rgba(251,191,36,0.04)' }));
+  // SE: dominant (more effective + less costly)
+  svg.appendChild(svgEl('rect', { x: x0, y: y0, width: mL + pW - x0, height: mT + pH - y0, fill: 'rgba(52,211,153,0.06)' }));
+  // NW: dominated
+  svg.appendChild(svgEl('rect', { x: mL, y: mT, width: x0 - mL, height: y0 - mT, fill: 'rgba(248,113,113,0.06)' }));
+  // SW: less effective + less costly
+  svg.appendChild(svgEl('rect', { x: mL, y: y0, width: x0 - mL, height: mT + pH - y0, fill: 'rgba(96,165,250,0.04)' }));
+
+  // Axes
+  svg.appendChild(svgEl('line', { x1: mL, y1: y0, x2: mL + pW, y2: y0, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1 }));
+  svg.appendChild(svgEl('line', { x1: x0, y1: mT, x2: x0, y2: mT + pH, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1 }));
+
+  // Quadrant labels
+  const qLabels = [
+    { text: 'NE (Trade-off)', x: (x0 + mL + pW) / 2, y: (mT + y0) / 2, color: '#fbbf24' },
+    { text: 'SE (Dominant)', x: (x0 + mL + pW) / 2, y: (y0 + mT + pH) / 2, color: '#34d399' },
+    { text: 'NW (Dominated)', x: (mL + x0) / 2, y: (mT + y0) / 2, color: '#f87171' },
+    { text: 'SW (Trade-off)', x: (mL + x0) / 2, y: (y0 + mT + pH) / 2, color: '#60a5fa' }
+  ];
+  qLabels.forEach(q => {
+    svg.appendChild(svgText(q.x, q.y, q.text, { 'text-anchor': 'middle', 'font-size': '11', fill: q.color, opacity: 0.5 }));
+  });
+
+  // 95% confidence ellipse
+  if (ss.length >= 3) {
+    const meanE = effects.reduce((a,b) => a+b, 0) / ss.length;
+    const meanC = costs.reduce((a,b) => a+b, 0) / ss.length;
+    let varE = 0, varC = 0, covEC = 0;
+    ss.forEach(s => {
+      varE += (s.deltaEffect - meanE) ** 2;
+      varC += (s.deltaCost - meanC) ** 2;
+      covEC += (s.deltaEffect - meanE) * (s.deltaCost - meanC);
+    });
+    varE /= (ss.length - 1); varC /= (ss.length - 1); covEC /= (ss.length - 1);
+    // Eigenvalues for ellipse
+    const trace = varE + varC;
+    const det = varE * varC - covEC * covEC;
+    const disc = Math.sqrt(Math.max(0, trace * trace / 4 - det));
+    const l1 = trace / 2 + disc;
+    const l2 = trace / 2 - disc;
+    // chi2 critical value for 2 df, p=0.05 = 5.991
+    const chi2 = 5.991;
+    const a = Math.sqrt(chi2 * Math.max(0.0001, l1));
+    const b = Math.sqrt(chi2 * Math.max(0.0001, l2));
+    const angle = Math.atan2(covEC, l1 - varC) * 180 / Math.PI;
+    // Draw ellipse
+    const cx = xScale(meanE), cy = yScale(meanC);
+    const rx = a / (xMax - xMin) * pW;
+    const ry = b / (yMax - yMin) * pH;
+    svg.appendChild(svgEl('ellipse', {
+      cx, cy, rx: Math.max(5, rx), ry: Math.max(5, ry),
+      fill: 'none', stroke: 'rgba(167,139,250,0.5)', 'stroke-width': 1.5, 'stroke-dasharray': '5,3',
+      transform: `rotate(${-angle},${cx},${cy})`
+    }));
+  }
+
+  // WTP line from origin
+  if (res.wtp > 0) {
+    const slope = res.wtp; // deltaCost = WTP * deltaEffect
+    // Draw from origin to edge
+    const xEdge = xMax;
+    const yEdge = slope * xMax;
+    if (yEdge <= yMax && yEdge >= yMin) {
+      svg.appendChild(svgEl('line', { x1: xScale(0), y1: yScale(0), x2: xScale(xEdge), y2: yScale(yEdge), stroke: 'rgba(251,191,36,0.4)', 'stroke-width': 1, 'stroke-dasharray': '4,4' }));
+      svg.appendChild(svgText(xScale(xEdge) - 5, yScale(yEdge) - 8, `WTP=${res.currency}${formatNum(res.wtp, 0)}`, { 'text-anchor': 'end', 'font-size': '9', fill: '#fbbf24', opacity: 0.7 }));
+    }
+  }
+
+  // Data points
+  ss.forEach((s, i) => {
+    const cx = xScale(s.deltaEffect), cy = yScale(s.deltaCost);
+    svg.appendChild(svgEl('circle', { cx, cy, r: 6, fill: '#60a5fa', stroke: '#1e3a5f', 'stroke-width': 1.5, opacity: 0.9 }));
+    svg.appendChild(svgText(cx + 9, cy + 4, s.study, { 'font-size': '9', fill: '#94a3b8' }));
+  });
+
+  // Axis labels
+  svg.appendChild(svgText(W/2, 20, 'Cost-Effectiveness Plane', { 'text-anchor': 'middle', 'font-size': '14', 'font-weight': '700', fill: '#60a5fa' }));
+  svg.appendChild(svgText(W/2, H - 5, `Incremental Effect (${res.unit})`, { 'text-anchor': 'middle', 'font-size': '11', fill: '#94a3b8' }));
+  svg.appendChild(svgText(15, H/2, `Incremental Cost (${res.currency})`, { 'text-anchor': 'middle', 'font-size': '11', fill: '#94a3b8', transform: `rotate(-90,15,${H/2})` }));
+
+  // Axis tick labels
+  const nTicks = 5;
+  for (let i = 0; i <= nTicks; i++) {
+    const v = xMin + (xMax - xMin) * i / nTicks;
+    const x = xScale(v);
+    svg.appendChild(svgEl('line', { x1: x, y1: mT + pH, x2: x, y2: mT + pH + 5, stroke: 'rgba(255,255,255,0.2)' }));
+    svg.appendChild(svgText(x, mT + pH + 18, v.toFixed(2), { 'text-anchor': 'middle', 'font-size': '9', fill: '#64748b' }));
+  }
+  for (let i = 0; i <= nTicks; i++) {
+    const v = yMin + (yMax - yMin) * i / nTicks;
+    const y = yScale(v);
+    svg.appendChild(svgEl('line', { x1: mL - 5, y1: y, x2: mL, y2: y, stroke: 'rgba(255,255,255,0.2)' }));
+    svg.appendChild(svgText(mL - 8, y + 4, formatNum(v, 0), { 'text-anchor': 'end', 'font-size': '9', fill: '#64748b' }));
+  }
+
+  box.appendChild(svg);
+}
+
+// ---- Summary table ----
+function drawSummary(res) {
+  const tbody = document.getElementById('summaryBody');
+  tbody.innerHTML = '';
+  if (!res) return;
+
+  const rows = [
+    ['Willingness-to-Pay (WTP)', `${res.currency}${formatNum(res.wtp, 0)}`],
+    ['Pooled NMB at WTP', `${res.currency}${formatNum(res.nmbPool.pooled)}`],
+    ['NMB 95% CI', `[${res.currency}${formatNum(res.nmbPool.ci_lo)}, ${res.currency}${formatNum(res.nmbPool.ci_hi)}]`],
+    ['P(Cost-Effective) at WTP', res.ceacAtWTP ? `${(res.ceacAtWTP.pCE * 100).toFixed(1)}%` : 'N/A'],
+  ];
+
+  if (res.icerPool) {
+    rows.push(['Pooled ICER', `${res.currency}${formatNum(res.icerPool.pooledICER, 0)} per ${res.unit}`]);
+    rows.push(['ICER 95% CI', `[${res.currency}${formatNum(res.icerPool.icerCI_lo, 0)}, ${res.currency}${formatNum(res.icerPool.icerCI_hi, 0)}]`]);
+  } else {
+    rows.push(['Pooled ICER', res.icerWarning || 'N/A']);
+  }
+
+  rows.push(['I\u00B2 (NMB heterogeneity)', `${res.nmbPool.I2.toFixed(1)}%`]);
+  rows.push(['\u03C4\u00B2 (NMB)', formatNum(res.nmbPool.tau2)]);
+  rows.push(['Number of studies (k)', res.nmbPool.k.toString()]);
+
+  rows.forEach(([label, val]) => {
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td'); td1.textContent = label;
+    const td2 = document.createElement('td'); td2.textContent = val;
+    tr.appendChild(td1); tr.appendChild(td2);
+    tbody.appendChild(tr);
+  });
+}
+
+// ---- Export helpers ----
+function exportSVG(boxId, filename) {
+  const box = document.getElementById(boxId);
+  const svg = box.querySelector('svg');
+  if (!svg) return;
+  const serializer = new XMLSerializer();
+  const source = serializer.serializeToString(svg);
+  const blob = new Blob([source], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportCSV(type) {
+  if (!lastResults) return;
+  let csv = '';
+  const res = lastResults;
+
+  if (type === 'nmb') {
+    csv = 'Study,NMB,SE_NMB,CI_Lo,CI_Hi\n';
+    res.nmbData.forEach(d => {
+      csv += `${d.study},${d.nmb.toFixed(2)},${d.seNMB.toFixed(2)},${(d.nmb - 1.96*d.seNMB).toFixed(2)},${(d.nmb + 1.96*d.seNMB).toFixed(2)}\n`;
+    });
+    csv += `Pooled (RE),${res.nmbPool.pooled.toFixed(2)},${res.nmbPool.se.toFixed(2)},${res.nmbPool.ci_lo.toFixed(2)},${res.nmbPool.ci_hi.toFixed(2)}\n`;
+  } else if (type === 'icer') {
+    csv = 'Study,ICER,LogICER,SE_LogICER,CI_Lo,CI_Hi\n';
+    res.icerData.forEach(d => {
+      csv += `${d.study},${d.icer.toFixed(2)},${d.logICER.toFixed(4)},${d.seLogICER.toFixed(4)},${Math.exp(d.logICER - 1.96*d.seLogICER).toFixed(2)},${Math.exp(d.logICER + 1.96*d.seLogICER).toFixed(2)}\n`;
+    });
+    if (res.icerPool) {
+      csv += `Pooled (RE),${res.icerPool.pooledICER.toFixed(2)},${res.icerPool.pooled.toFixed(4)},${res.icerPool.se.toFixed(4)},${res.icerPool.icerCI_lo.toFixed(2)},${res.icerPool.icerCI_hi.toFixed(2)}\n`;
+    }
+  } else if (type === 'ceac') {
+    csv = 'WTP,P_CostEffective\n';
+    res.ceacData.forEach(d => { csv += `${d.wtp},${d.pCE.toFixed(6)}\n`; });
+  } else if (type === 'ceplane') {
+    csv = 'Study,DeltaCost,SE_Cost,DeltaEffect,SE_Effect,Correlation\n';
+    res.studies.forEach(s => { csv += `${s.study},${s.deltaCost},${s.seCost},${s.deltaEffect},${s.seEffect},${s.corr}\n`; });
+  }
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `costeffma_${type}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---- Expose for testing ----
+window.CostEffMA = {
+  parseCSV, calcNMB, calcICER, dlPool, calcCEAC, phi, runAnalysis,
+  getStudies: () => studies,
+  getLastResults: () => lastResults
+};
+
+// ---- UI Wiring ----
+function analyze() {
+  const csv = document.getElementById('csvInput').value;
+  studies = parseCSV(csv);
+  if (studies.length === 0) {
+    alert('No valid studies found. Check CSV format.');
+    return;
+  }
+  const wtp = parseInt(document.getElementById('wtpSlider').value) || 25000;
+  lastResults = runAnalysis(wtp);
+  if (!lastResults) return;
+
+  document.getElementById('resultsPanel').style.display = '';
+  drawNMBForest(lastResults);
+  drawICERForest(lastResults);
+  drawCEAC(lastResults);
+  drawCEPlane(lastResults);
+  drawSummary(lastResults);
+}
+
+document.getElementById('analyzeBtn').addEventListener('click', analyze);
+
+document.getElementById('demoBtn').addEventListener('click', () => {
+  document.getElementById('csvInput').value = DEMO_CSV;
+});
+
+document.getElementById('wtpSlider').addEventListener('input', function() {
+  const v = parseInt(this.value);
+  const cur = document.getElementById('currencyInput').value || '£';
+  document.getElementById('wtpDisplay').textContent = `${cur}${v.toLocaleString('en-GB')}`;
+  // Re-run if we have data
+  if (studies.length > 0) {
+    lastResults = runAnalysis(v);
+    drawNMBForest(lastResults);
+    drawICERForest(lastResults);
+    drawCEAC(lastResults);
+    drawCEPlane(lastResults);
+    drawSummary(lastResults);
+  }
+});
+
+document.getElementById('wtpMax').addEventListener('change', function() {
+  document.getElementById('wtpSlider').max = this.value;
+});
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
