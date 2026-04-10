@@ -154,6 +154,13 @@ input:focus{outline:none;border-color:var(--accent)}
    CostEffMA — Cost-Effectiveness Meta-Analysis Engine
    ============================================================ */
 
+// --- CSV injection guard ---
+function csvSafe(s) {
+  s = String(s);
+  if (/^[=+@\t\r]/.test(s)) return "'" + s;
+  return s;
+}
+
 const DEMO_CSV = `Study,DeltaCost,SE_Cost,DeltaEffect,SE_Effect,Correlation
 Thompson 2019,5000,1200,0.15,0.04,0.3
 Chen 2020,8000,2000,0.22,0.06,0.25
@@ -820,13 +827,13 @@ function exportCSV(type) {
   if (type === 'nmb') {
     csv = 'Study,NMB,SE_NMB,CI_Lo,CI_Hi\n';
     res.nmbData.forEach(d => {
-      csv += `${d.study},${d.nmb.toFixed(2)},${d.seNMB.toFixed(2)},${(d.nmb - 1.96*d.seNMB).toFixed(2)},${(d.nmb + 1.96*d.seNMB).toFixed(2)}\n`;
+      csv += `${csvSafe(d.study)},${d.nmb.toFixed(2)},${d.seNMB.toFixed(2)},${(d.nmb - 1.96*d.seNMB).toFixed(2)},${(d.nmb + 1.96*d.seNMB).toFixed(2)}\n`;
     });
     csv += `Pooled (RE),${res.nmbPool.pooled.toFixed(2)},${res.nmbPool.se.toFixed(2)},${res.nmbPool.ci_lo.toFixed(2)},${res.nmbPool.ci_hi.toFixed(2)}\n`;
   } else if (type === 'icer') {
     csv = 'Study,ICER,LogICER,SE_LogICER,CI_Lo,CI_Hi\n';
     res.icerData.forEach(d => {
-      csv += `${d.study},${d.icer.toFixed(2)},${d.logICER.toFixed(4)},${d.seLogICER.toFixed(4)},${Math.exp(d.logICER - 1.96*d.seLogICER).toFixed(2)},${Math.exp(d.logICER + 1.96*d.seLogICER).toFixed(2)}\n`;
+      csv += `${csvSafe(d.study)},${d.icer.toFixed(2)},${d.logICER.toFixed(4)},${d.seLogICER.toFixed(4)},${Math.exp(d.logICER - 1.96*d.seLogICER).toFixed(2)},${Math.exp(d.logICER + 1.96*d.seLogICER).toFixed(2)}\n`;
     });
     if (res.icerPool) {
       csv += `Pooled (RE),${res.icerPool.pooledICER.toFixed(2)},${res.icerPool.pooled.toFixed(4)},${res.icerPool.se.toFixed(4)},${res.icerPool.icerCI_lo.toFixed(2)},${res.icerPool.icerCI_hi.toFixed(2)}\n`;
@@ -836,7 +843,7 @@ function exportCSV(type) {
     res.ceacData.forEach(d => { csv += `${d.wtp},${d.pCE.toFixed(6)}\n`; });
   } else if (type === 'ceplane') {
     csv = 'Study,DeltaCost,SE_Cost,DeltaEffect,SE_Effect,Correlation\n';
-    res.studies.forEach(s => { csv += `${s.study},${s.deltaCost},${s.seCost},${s.deltaEffect},${s.seEffect},${s.corr}\n`; });
+    res.studies.forEach(s => { csv += `${csvSafe(s.study)},${s.deltaCost},${s.seCost},${s.deltaEffect},${s.seEffect},${s.corr}\n`; });
   }
 
   const blob = new Blob([csv], { type: 'text/csv' });
