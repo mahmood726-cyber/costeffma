@@ -8,15 +8,49 @@ import time
 import math
 import os
 import json
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-APP_PATH = Path(__file__).resolve().parent / "index.html"
-APP_URL = APP_PATH.as_uri()
+REPO_ROOT = Path(__file__).resolve().parent
+APP_URL = ""
+
+
+class QuietHTTPServer(ThreadingHTTPServer):
+    # Prefer the required local port, but fail closed to a random port if
+    # another suite already owns it.
+    allow_reuse_address = False
+    daemon_threads = True
+
+
+class QuietHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(REPO_ROOT), **kwargs)
+
+    def log_message(self, format, *args):
+        return
+
+
+@pytest.fixture(scope="session", autouse=True)
+def app_server():
+    """Serve the app over localhost instead of file:// for browser parity."""
+    global APP_URL
+    try:
+        server = QuietHTTPServer(("127.0.0.1", 8000), QuietHandler)
+    except OSError:
+        server = QuietHTTPServer(("127.0.0.1", 0), QuietHandler)
+    APP_URL = f"http://127.0.0.1:{server.server_port}/index.html"
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield
+    server.shutdown()
+    thread.join(timeout=5)
+    server.server_close()
 
 
 @pytest.fixture(scope="session")

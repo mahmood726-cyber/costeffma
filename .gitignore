@@ -1,0 +1,12 @@
+# Python test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Sentinel pre-push hook output
+STUCK_FAILURES.md
+STUCK_FAILURES.jsonl
+sentinel-findings.md
+sentinel-findings.jsonl
+review-findings.md
+review-findings.jsonl
