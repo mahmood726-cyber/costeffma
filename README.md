@@ -30,7 +30,7 @@ CSV with columns: `Study, DeltaCost, SE_Cost, DeltaEffect, SE_Effect, [Correlati
 ## Testing
 
 ```bash
-cd C:\Models\CostEffMA
+# from the repo root
 python -m pytest test_app.py -v
 ```
 

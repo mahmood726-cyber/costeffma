@@ -286,7 +286,9 @@ function dlPool(estimates, variances) {
   const sumW2 = w.reduce((s, wi) => s + wi*wi, 0);
   const C = sumW - sumW2/sumW;
   let tau2 = Math.max(0, (Q - (k-1)) / C);
-  const wRE = variances.map(v => 1 / (v + tau2));
+  // Guard against zero total variance (v=0 and tau2=0) which would yield
+  // an infinite weight and poison the pooled estimate.
+  const wRE = variances.map(v => (v + tau2) > 0 ? 1 / (v + tau2) : 0);
   const sumWRE = wRE.reduce((a,b) => a+b, 0);
   const pooled = wRE.reduce((s, wi, i) => s + wi*estimates[i], 0) / sumWRE;
   const se = Math.sqrt(1 / sumWRE);
